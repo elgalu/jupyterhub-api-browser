@@ -2,7 +2,7 @@
 
 The `JupyterHub API Browser` is a service you deploy in your JupyterHub which allows you to browse the HUB API methods.
 
-[API Browser](https://raw.githubusercontent.com/datalayer/jupyterhub-api-browser/master/doc/img/api-browser.png "API Browser")
+![API Browser](https://raw.githubusercontent.com/datalayer/jupyterhub-api-browser/master/doc/img/api-browser.png "API Browser")
 
 To run the Browser from source:
 
