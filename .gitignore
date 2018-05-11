@@ -1,0 +1,7 @@
+.*
+*.log
+*.lock
+*.sqlite
+build
+lib
+node_modules
