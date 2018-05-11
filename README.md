@@ -12,7 +12,7 @@ cd juptyerhub-api-browser
 yarn install
 yarn build
 jupyterhub &
-open http://localhost:8000/services/api-browser
+open http://localhost:8000/services/api-browser/ # Don't forget the trailing slash...
 ```
 
 For front-end iterative development:
