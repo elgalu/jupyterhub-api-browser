@@ -6,7 +6,7 @@
     "clean": "rimraf lib build",
     "clean-all": "rimraf lib build node_modules",
     "prepublishOnly": "npm run build",
-    "watch": "concurrently --kill-others \"tsc -w\" \"webpack --watch\" \"webpack-dev-server --open\""
+    "watch": "concurrently --kill-others \"tsc -w\" \"webpack --watch\" \"webpack-dev-server --open --host localhost --port 8080\""
   },
   "license": "Apache-2.0",
   "author": "Datalayer",

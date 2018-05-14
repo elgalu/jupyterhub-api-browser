@@ -12,6 +12,11 @@ from tornado.log import app_log
 from tornado.options import define, options, parse_command_line
 from tornado.web import RequestHandler, Application, StaticFileHandler, authenticated, asynchronous
 
+api_token = os.environ['JUPYTERHUB_API_TOKEN']
+auth_header = {
+    'Authorization': 'token %s' % api_token,
+}
+
 class IndexHandler(RequestHandler):
     def get(self):
         self.render("index.html")
@@ -20,10 +25,6 @@ class InfoHandler(HubOAuthenticated, RequestHandler):
     @authenticated
     @coroutine
     def get(self):
-        api_token = os.environ['JUPYTERHUB_API_TOKEN']
-        auth_header = {
-            'Authorization': 'token %s' % api_token,
-        }
         action = 'info'
         req = HTTPRequest(
             url = options.url + '/' + action,
@@ -40,11 +41,7 @@ class InfoHandler(HubOAuthenticated, RequestHandler):
 class UsersHandler(HubOAuthenticated, RequestHandler):
     @authenticated
     @coroutine
-    def get(self):
-        api_token = os.environ['JUPYTERHUB_API_TOKEN']
-        auth_header = {
-            'Authorization': 'token %s' % api_token,
-        }
+    def get(self, slug=None):
         action = 'users'
         req = HTTPRequest(
             url = options.url + '/' + action,
@@ -57,6 +54,40 @@ class UsersHandler(HubOAuthenticated, RequestHandler):
         app_log.info(j)
         self.set_header('content-type', 'application/json')
         self.write(json.dumps(j, indent=1, sort_keys=True))
+
+class UserHandler(HubOAuthenticated, RequestHandler):
+    @authenticated
+    @coroutine
+    def post(self, username):
+        if not self.current_user: self.redirect()
+        req = HTTPRequest(
+            method = 'POST',
+            url = options.url + '/users/' + username,
+            body = "",
+            headers = auth_header,
+        )
+        client = AsyncHTTPClient()
+        fetch = client.fetch
+        resp = yield fetch(req)
+        j = json.loads(resp.body.decode('utf8', 'replace'))
+        app_log.info(j)
+        self.set_header('content-type', 'application/json')
+        self.write(json.dumps(j, indent=1, sort_keys=True))
+
+    @authenticated
+    @coroutine
+    def delete(self, username):
+        if not self.current_user: self.redirect()
+        req = HTTPRequest(
+            method = 'DELETE',
+            url = options.url + '/users/' + username,
+            headers = auth_header,
+        )
+        client = AsyncHTTPClient()
+        fetch = client.fetch
+        resp = yield fetch(req)
+        self.set_header('content-type', 'application/json')
+        self.write(json.dumps({'deleted': username}, indent=1, sort_keys=True))
 
 class WhoAmIHandler(HubOAuthenticated, RequestHandler):
     # hub_users is a set of users who are allowed to access the service
@@ -83,14 +114,19 @@ def main():
             "Could not load pycurl: %s\n"
             "pycurl is recommended if you have a large number of users.",
             e)
+    settings = {
+        "cookie_secret": os.urandom(32),
+        "xsrf_cookies": False,
+    }
     app = Application([
         (os.environ['JUPYTERHUB_SERVICE_PREFIX'], IndexHandler),
         (url_path_join(os.environ['JUPYTERHUB_SERVICE_PREFIX'], 'whoami'), WhoAmIHandler),
         (url_path_join(os.environ['JUPYTERHUB_SERVICE_PREFIX'], 'info'), InfoHandler),
         (url_path_join(os.environ['JUPYTERHUB_SERVICE_PREFIX'], 'users'), UsersHandler),
+        (url_path_join(os.environ['JUPYTERHUB_SERVICE_PREFIX'], r'/users/([^/]+)'), UserHandler),
         (url_path_join(os.environ['JUPYTERHUB_SERVICE_PREFIX'], 'oauth_callback'), HubOAuthCallbackHandler),
         (r"{0}(.*)".format(os.environ['JUPYTERHUB_SERVICE_PREFIX']), StaticFileHandler, {"path": "."}),
-    ], cookie_secret = os.urandom(32))
+    ], **settings)
     http_server = HTTPServer(app)
     url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
     http_server.listen(url.port, url.hostname)
